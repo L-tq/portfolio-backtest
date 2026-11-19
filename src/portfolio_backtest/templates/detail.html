@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}Run {{ run.id[:12] }} | Portfolio Ledger{% endblock %}
+{% block head %}
+  <script src="/vendor/plotly.min.js" defer></script>
+  <script src="{{ url_for('static', path='charts.js') }}" defer></script>
+{% endblock %}
+{% block content %}
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <ol>
+      <li><a href="/">Backtest library</a></li>
+      <li aria-current="page">Run {{ run.id[:12] }}</li>
+    </ol>
+  </nav>
+
+  <header class="run-header">
+    <div>
+      <p class="kicker">Completed simulation</p>
+      <h1>Run <span class="run-identifier">{{ run.id[:12] }}</span></h1>
+      <p class="lede">Independent portfolio accounting with signal execution, settlement, and short-risk controls.</p>
+    </div>
+    <div class="run-meta">
+      <dl>
+        <div><dt>Status</dt><dd><span class="status status-{{ run.status }}">{{ run.status }}</span></dd></div>
+        <div><dt>Archive</dt><dd id="archive-state">{{ "Archived" if run.archived else "Active" }}</dd></div>
+        <div><dt>Completed</dt><dd>{{ run.completed_at[:19].replace("T", " ") if run.completed_at else "—" }}</dd></div>
+      </dl>
+      <div class="header-actions">
+        <button class="button button-quiet archive-button" type="button" data-run-id="{{ run.id }}" data-archived="{{ 'true' if run.archived else 'false' }}">
+          {{ "Unarchive run" if run.archived else "Archive run" }}
+        </button>
+        <button class="button button-danger delete-trigger" type="button" data-run-id="{{ run.id }}">Delete run</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="scope-nav" aria-label="Result scope">
+    <ul>
+      {% for scope in scopes %}
+        <li>
+          <a href="/runs/{{ run.id }}?scope={{ scope }}" {% if scope == selected_scope %}aria-current="page"{% endif %}>
+            {{ "Full window" if scope == "full" else "Walk-forward " + scope.split("-")[-1] }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </nav>
+
+  <section class="chart-ledger" aria-labelledby="performance-title" data-run-id="{{ run.id }}" data-scope="{{ selected_scope }}" id="chart-ledger">
+    <div class="section-heading">
+      <div>
+        <h2 id="performance-title">Portfolio path</h2>
+        <p>Daily marks for {{ selected_scope }}. Equity starts at index 100 for comparison.</p>
+      </div>
+      <p class="scope-stamp">{{ selected_scope }}</p>
+    </div>
+
+    <figure class="primary-figure">
+      <div id="equity-chart" class="chart chart-tall" role="img" aria-label="Portfolio and benchmark equity curves for this run" aria-describedby="equity-caption"></div>
+      <details class="data-alternative">
+        <summary>View equity data</summary>
+        <div class="table-wrapper" tabindex="0" role="region" aria-label="Monthly equity data">
+          <table class="data-table compact-table">
+            <caption>Monthly portfolio and benchmark values</caption>
+            <thead><tr><th scope="col">Date</th><th scope="col">Portfolio</th><th scope="col">Benchmark</th></tr></thead>
+            <tbody id="equity-table-body"><tr><td colspan="3">Loading series…</td></tr></tbody>
+          </table>
+        </div>
+      </details>
+      <figcaption id="equity-caption">Portfolio equity compared with the configured benchmark. Daily values are also available in the table above.</figcaption>
+    </figure>
+
+    <div class="chart-pair">
+      <figure>
+        <div id="drawdown-chart" class="chart" role="img" aria-label="Portfolio drawdown through time" aria-describedby="drawdown-caption"></div>
+        <details class="data-alternative">
+          <summary>View drawdown data</summary>
+          <div class="table-wrapper" tabindex="0" role="region" aria-label="Monthly drawdown data">
+            <table class="data-table compact-table">
+              <caption>Monthly drawdown values</caption>
+              <thead><tr><th scope="col">Date</th><th scope="col">Drawdown</th></tr></thead>
+              <tbody id="drawdown-table-body"><tr><td colspan="2">Loading series…</td></tr></tbody>
+            </table>
+          </div>
+        </details>
+        <figcaption id="drawdown-caption">Drawdown measures the decline from the previous equity peak.</figcaption>
+      </figure>
+      <figure>
+        <div id="exposure-chart" class="chart" role="img" aria-label="Portfolio long and short exposure through time" aria-describedby="exposure-caption"></div>
+        <details class="data-alternative">
+          <summary>View exposure data</summary>
+          <div class="table-wrapper" tabindex="0" role="region" aria-label="Monthly exposure data">
+            <table class="data-table compact-table">
+              <caption>Monthly long and short exposure</caption>
+              <thead><tr><th scope="col">Date</th><th scope="col">Long</th><th scope="col">Short</th></tr></thead>
+              <tbody id="exposure-table-body"><tr><td colspan="3">Loading series…</td></tr></tbody>
+            </table>
+          </div>
+        </details>
+        <figcaption id="exposure-caption">Long and short exposure as a share of marked portfolio equity.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="metrics-section" aria-labelledby="metrics-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="metrics-title">Return and risk</h2>
+        <p>Undefined values are shown as a dash.</p>
+      </div>
+    </div>
+    <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="metrics-caption">
+      <table class="data-table metric-table">
+        <caption id="metrics-caption">Metrics by result scope with benchmark values</caption>
+        <thead>
+          <tr>
+            <th scope="col">Metric</th>
+            {% for scope in scopes %}
+              <th scope="col">{{ scope }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in metrics %}
+            <tr>
+              <th scope="row" data-label="Metric">{{ row.label }}</th>
+              {% for scope in scopes %}
+                <td data-label="{{ scope }}">
+                  <span class="metric-value">{{ row["values"][scope].display }}</span>
+                  {% if row["values"][scope].benchmark_display != "—" %}
+                    <span class="cell-note">Benchmark {{ row["values"][scope].benchmark_display }}</span>
+                  {% endif %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if walk_summary %}
+    <section class="summary-section" aria-labelledby="walk-summary-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="walk-summary-title">Walk-forward aggregates</h2>
+          <p>Each window starts independently from the configured initial cash.</p>
+        </div>
+      </div>
+      <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="walk-caption">
+        <table class="data-table">
+          <caption id="walk-caption">Mean, median, and positive-window rate</caption>
+          <thead><tr><th scope="col">Metric</th><th scope="col">Mean</th><th scope="col">Median</th><th scope="col">Positive-window rate</th></tr></thead>
+          <tbody>
+            {% for row in summary_rows %}
+              <tr>
+                <th scope="row" data-label="Metric">{{ row.label }}</th>
+                <td data-label="Mean">{{ row.mean }}</td>
+                <td data-label="Median">{{ row.median }}</td>
+                <td data-label="Positive-window rate">{{ row.positive }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="blotter-section" aria-labelledby="blotter-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="blotter-title">Trade blotter</h2>
+        <p>{{ trades.total }} fills in {{ selected_scope }}. Showing page {{ trades.page }} of {{ trades.pages }}.</p>
+      </div>
+    </div>
+    <search>
+      <form action="/runs/{{ run.id }}" method="get" class="blotter-filter" aria-labelledby="blotter-title">
+        <input type="hidden" name="scope" value="{{ selected_scope }}">
+        <div class="field">
+          <label for="trade-symbol">Symbol</label>
+          <input id="trade-symbol" name="symbol" value="{{ filters.symbol }}" spellcheck="false" autocapitalize="none">
+        </div>
+        <div class="field">
+          <label for="trade-direction">Direction</label>
+          <select id="trade-direction" name="direction">
+            <option value="">All directions</option>
+            <option value="long" {% if filters.direction == "long" %}selected{% endif %}>Long</option>
+            <option value="short" {% if filters.direction == "short" %}selected{% endif %}>Short</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="trade-reason">Reason</label>
+          <select id="trade-reason" name="reason">
+            <option value="">All reasons</option>
+            <option value="signal" {% if filters.reason == "signal" %}selected{% endif %}>Signal</option>
+            <option value="margin" {% if filters.reason == "margin" %}selected{% endif %}>Margin</option>
+            <option value="delisting" {% if filters.reason == "delisting" %}selected{% endif %}>Delisting</option>
+          </select>
+        </div>
+        <button type="submit" class="button button-secondary">Filter trades</button>
+      </form>
+    </search>
+        {% if trades["items"] %}
+      <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="trades-caption">
+        <table class="data-table trade-table">
+          <caption id="trades-caption">Executed fills for {{ selected_scope }}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Symbol</th>
+              <th scope="col">Direction</th>
+              <th scope="col">Action</th>
+              <th scope="col">Quantity</th>
+              <th scope="col">Price</th>
+              <th scope="col">Notional</th>
+              <th scope="col">Commission</th>
+              <th scope="col">Realized P&amp;L</th>
+              <th scope="col">Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for trade in trades["items"] %}
+              <tr>
+                <td data-label="Date">{{ trade.date[:10] }}</td>
+                <th scope="row" data-label="Symbol">{{ trade.symbol }}</th>
+                <td data-label="Direction">{{ trade.direction }}</td>
+                <td data-label="Action">{{ trade.action }}</td>
+                <td data-label="Quantity">{{ "%.4f"|format(trade.quantity) }}</td>
+                <td data-label="Price">{{ "%.4f"|format(trade.price) }}</td>
+                <td data-label="Notional">{{ "%.2f"|format(trade.notional) }}</td>
+                <td data-label="Commission">{{ "%.2f"|format(trade.commission) }}</td>
+                <td data-label="Realized P&amp;L">{{ "%.2f"|format(trade.realized_pnl) }}</td>
+                <td data-label="Reason">{{ trade.reason }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <nav class="pagination" aria-label="Trade pages">
+        {% if trades.page > 1 %}
+          <a href="/runs/{{ run.id }}?{{ filters.query_string }}&page={{ trades.page - 1 }}">Previous</a>
+        {% endif %}
+        <span>Page {{ trades.page }} of {{ trades.pages }}</span>
+        {% if trades.page < trades.pages %}
+          <a href="/runs/{{ run.id }}?{{ filters.query_string }}&page={{ trades.page + 1 }}">Next</a>
+        {% endif %}
+      </nav>
+    {% else %}
+      <div class="empty-state">
+        <h3>No fills match these filters</h3>
+        <p>Clear the filters to inspect the full blotter.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <dialog id="delete-dialog" aria-labelledby="delete-title" aria-describedby="delete-description">
+    <form method="dialog">
+      <h2 id="delete-title">Delete this run?</h2>
+      <p id="delete-description">This removes its metadata, trades, positions, and result files. This cannot be undone.</p>
+      <p class="dialog-run">{{ run.id }}</p>
+      <div class="dialog-actions">
+        <button type="submit" value="cancel" class="button button-secondary" autofocus>Cancel</button>
+        <button type="button" value="delete" class="button button-danger" id="delete-confirm">Delete run</button>
+      </div>
+    </form>
+  </dialog>
+{% endblock %}
+{% block scripts %}
+  <script>
+    window.BACKTEST_RUN_ID = {{ run.id|tojson }};
+    window.BACKTEST_SCOPE = {{ selected_scope|tojson }};
+  </script>
+{% endblock %}

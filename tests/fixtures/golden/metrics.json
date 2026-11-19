@@ -1,0 +1,34 @@
+{
+  "alpha": 1.4583706291088947,
+  "average_long_exposure": 0.3124687656171914,
+  "average_short_exposure": 0.0,
+  "beta": 0.016340888930954617,
+  "cagr": 4.293392663765387,
+  "calmar": 4297.686056429298,
+  "correlation": 0.015434835923711575,
+  "hit_rate": 0.5,
+  "information_ratio": 1.5397134640200547,
+  "long": {
+    "average_loss": -508.99100899100875,
+    "average_pnl": 239.5104895104898,
+    "average_win": 988.0119880119884,
+    "count": 2,
+    "hit_rate": 0.5,
+    "total_pnl": 479.0209790209796
+  },
+  "max_drawdown": -0.0009990009990009652,
+  "sharpe": 8.212551973499112,
+  "short": {
+    "average_loss": null,
+    "average_pnl": null,
+    "average_win": null,
+    "count": 0,
+    "hit_rate": null,
+    "total_pnl": null
+  },
+  "sortino": 235.50751285139518,
+  "total_return": 0.047378670280768365,
+  "tracking_error": 0.2453645826612388,
+  "turnover": 89.63453933546647,
+  "volatility": 0.17976404871531004
+}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Compare runs | Portfolio Ledger{% endblock %}
+{% block head %}
+  <script src="/vendor/plotly.min.js" defer></script>
+  <script src="{{ url_for('static', path='charts.js') }}" defer></script>
+{% endblock %}
+{% block content %}
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <ol><li><a href="/">Backtest library</a></li><li aria-current="page">Compare</li></ol>
+  </nav>
+  <header class="page-intro">
+    <p class="kicker">Side by side</p>
+    <h1>Compare {{ runs|length }} runs</h1>
+    <p class="lede">Normalized paths make differing capital bases directly comparable without rewriting either run.</p>
+  </header>
+
+  <section class="compare-layout" aria-labelledby="compare-chart-title" data-run-ids="{{ run_ids|tojson }}" id="compare-ledger">
+    <div class="compare-rail">
+      <h2 id="change-compare">Change comparison</h2>
+      <form action="/compare" method="get">
+        <fieldset>
+          <legend>Completed runs</legend>
+          <p class="field-hint">Choose 2 to 6 runs.</p>
+          {% for candidate in available_runs %}
+            <label class="check-row">
+              <input type="checkbox" name="runs" value="{{ candidate.id }}" {% if candidate.id in run_ids %}checked{% endif %}>
+              <span>{{ candidate.id[:12] }} · target {{ candidate.config.target_n if candidate.config else "—" }}</span>
+            </label>
+          {% endfor %}
+        </fieldset>
+        <button type="submit" class="button button-primary">Compare runs</button>
+      </form>
+    </div>
+
+    <div class="compare-main">
+      <div class="section-heading">
+        <div>
+          <h2 id="compare-chart-title">Normalized equity</h2>
+          <p>Every run starts at 100 on its first available date.</p>
+        </div>
+      </div>
+      <figure class="primary-figure">
+        <div id="compare-chart" class="chart chart-tall" role="img" aria-label="Normalized equity curves for the selected runs" aria-describedby="compare-caption"></div>
+        <details class="data-alternative">
+          <summary>View comparison data</summary>
+          <div class="table-wrapper" tabindex="0" role="region" aria-label="Monthly comparison data">
+            <table class="data-table compact-table">
+              <caption>Monthly normalized equity by run</caption>
+              <thead id="compare-table-head"></thead>
+              <tbody id="compare-table-body"><tr><td>Loading series…</td></tr></tbody>
+            </table>
+          </div>
+        </details>
+        <figcaption id="compare-caption">Portfolio paths for the selected runs. Monthly observations are available in the data table above.</figcaption>
+      </figure>
+
+      <section class="compare-metrics" aria-labelledby="compare-metrics-title">
+        <h2 id="compare-metrics-title">Run ledger</h2>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="compare-runs-caption">
+          <table class="data-table">
+            <caption id="compare-runs-caption">Selected run configuration</caption>
+            <thead><tr><th scope="col">Run</th><th scope="col">Completed</th><th scope="col">Capital</th><th scope="col">Target</th><th scope="col">Cadence</th><th scope="col">Lag</th></tr></thead>
+            <tbody>
+              {% for run in runs %}
+                <tr>
+                  <th scope="row" data-label="Run"><a href="/runs/{{ run.id }}">{{ run.id[:12] }}</a></th>
+                  <td data-label="Completed">{{ run.completed_at[:10] if run.completed_at else "—" }}</td>
+                  <td data-label="Capital">{{ "%.0f"|format(run.config.initial_cash) }}</td>
+                  <td data-label="Target">{{ run.config.target_n }}</td>
+                  <td data-label="Cadence">{{ run.config.rebalance_days }} bars</td>
+                  <td data-label="Lag">{{ run.config.execution_lag_bars }} bars</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </section>
+{% endblock %}

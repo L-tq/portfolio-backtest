@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Run unavailable | Portfolio Ledger{% endblock %}
+{% block content %}
+  <header class="page-intro">
+    <p class="kicker">Result unavailable</p>
+    <h1>Run {{ run.id[:12] }} is {{ run.status }}</h1>
+    {% if run.failure_details %}
+      <p class="error-copy">{{ run.failure_details }}</p>
+    {% else %}
+      <p class="lede">Results appear after the simulation finishes and storage is atomically finalized.</p>
+    {% endif %}
+    <a class="button button-secondary" href="/">Return to the library</a>
+  </header>
+{% endblock %}
