@@ -1,13 +1,13 @@
 {
-  "alpha": 1.4583706291088947,
+  "alpha": 1.7131671213948685,
   "average_long_exposure": 0.3124687656171914,
   "average_short_exposure": 0.0,
-  "beta": 0.016340888930954617,
+  "beta": -0.020663640552290925,
   "cagr": 4.293392663765387,
   "calmar": 4297.686056429298,
-  "correlation": 0.015434835923711575,
+  "correlation": -0.019686360588780878,
   "hit_rate": 0.5,
-  "information_ratio": 1.5397134640200547,
+  "information_ratio": 1.630392768380026,
   "long": {
     "average_loss": -508.99100899100875,
     "average_pnl": 239.5104895104898,
@@ -28,7 +28,7 @@
   },
   "sortino": 235.50751285139518,
   "total_return": 0.047378670280768365,
-  "tracking_error": 0.2453645826612388,
+  "tracking_error": 0.26482043124407767,
   "turnover": 89.63453933546647,
   "volatility": 0.17976404871531004
 }

@@ -30,6 +30,18 @@ def _matrix(values: Any, name: str) -> np.ndarray:
     return np.ascontiguousarray(array)
 
 
+def _validated_signal_values(values: Any) -> np.ndarray:
+    """Validate exact directions before narrowing values to int8."""
+    array = np.asarray(values)
+    try:
+        numeric = array.astype(np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("signals must be numeric and may only contain -1, 0, and 1") from exc
+    if not np.isfinite(numeric).all() or not np.isin(numeric, (-1.0, 0.0, 1.0)).all():
+        raise ValueError("signals may only contain -1, 0, and 1")
+    return np.ascontiguousarray(numeric.astype(np.int8))
+
+
 class PricePanel(BaseModel):
     """Aligned, adjusted OHLC panels using the shared trading calendar."""
 
@@ -126,11 +138,9 @@ class SignalPanel(BaseModel):
     @field_validator("signals", mode="before")
     @classmethod
     def validate_signals(cls, value: Any) -> np.ndarray:
-        array = np.asarray(value, dtype=np.int8)
+        array = _validated_signal_values(value)
         if array.ndim != 2:
             raise ValueError("signals must be a two-dimensional array")
-        if not np.isin(array, (-1, 0, 1)).all():
-            raise ValueError("signals may only contain -1, 0, and 1")
         return np.ascontiguousarray(array)
 
     @model_validator(mode="after")

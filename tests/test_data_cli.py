@@ -18,7 +18,7 @@ from portfolio_backtest.data import (
     load_signal_panel,
 )
 from portfolio_backtest.engine import execute_backtest
-from portfolio_backtest.models import BacktestConfig, BacktestRequest
+from portfolio_backtest.models import BacktestConfig, BacktestRequest, SignalPanel
 
 
 def _write_market_data(root: Path) -> None:
@@ -73,8 +73,40 @@ def test_delisting_inference_marks_only_the_shorter_source(tmp_path) -> None:
     assert not panel.delisting_mask[-1, 0]
     assert panel.delisting_mask[-1, 1]
 
+    later_end = load_price_panel(tmp_path, ["S0", "S1"], end="2024-01-31")
+    assert not later_end.delisting_mask[-1, 0]
+    assert later_end.delisting_mask[-1, 1]
+
     truncated = load_price_panel(tmp_path, ["S0", "S1"], end="2024-01-03")
     assert not truncated.delisting_mask.any()
+
+
+def test_end_after_data_horizon_does_not_delist_unchanged_sources(tmp_path) -> None:
+    _write_market_data(tmp_path)
+    panel = load_price_panel(tmp_path, ["S0", "S1"], end="2024-01-31")
+    assert not panel.delisting_mask.any()
+
+
+@pytest.mark.parametrize("value", [1.5, 257, -129])
+def test_invalid_signal_values_are_rejected_before_int8_conversion(
+    tmp_path, value: float | int
+) -> None:
+    _write_market_data(tmp_path)
+    panel = load_price_panel(tmp_path, ["S0", "S1"])
+    signal_file = tmp_path / "invalid-signal.csv"
+    signal_file.write_text(
+        f"date,symbol,signal\n2024-01-02,S0,{value}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="signals may only contain"):
+        load_signal_panel(signal_file, panel)
+
+    with pytest.raises(ValueError, match="signals may only contain"):
+        SignalPanel(
+            dates=panel.dates[:1],
+            symbols=("S0",),
+            signals=np.asarray([[value]]),
+        )
 
 
 def test_benchmark_file_and_config_precedence(tmp_path) -> None:

@@ -221,3 +221,20 @@ def test_benchmark_relative_metrics_and_explicit_nulls() -> None:
     assert with_benchmark["correlation"] is not None
     assert without_benchmark["beta"] is None
     assert without_benchmark["information_ratio"] is None
+
+
+def test_short_benchmark_does_not_fill_trailing_zero_returns() -> None:
+    result = execute_backtest(
+        make_request(
+            [[10.0], [11.0], [12.0], [11.0]],
+            [[1], [1], [1], [1]],
+            benchmark_values=[100.0, 101.0],
+            benchmark_bars=2,
+        )
+    ).full_window
+    curve = result.equity_curve
+
+    assert curve["benchmark"].isna().tolist() == [False, False, True, True]
+    assert curve["benchmark_return"].isna().tolist() == [True, False, True, True]
+    for name in ("alpha", "beta", "correlation", "tracking_error", "information_ratio"):
+        assert result.metrics[name] is None

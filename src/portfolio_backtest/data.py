@@ -18,6 +18,7 @@ from .models import (
     PricePanel,
     SignalPanel,
     WalkForwardWindow,
+    _validated_signal_values,
     windows_from_mapping,
 )
 
@@ -94,13 +95,14 @@ def load_price_panel(
     if len(common) < 2:
         raise ValueError("the selected symbols need at least two common trading dates")
 
-    effective_end = end_ts if end_ts is not None else max(source_last_dates.values())
+    data_horizon = max(source_last_dates.values())
+    effective_end = data_horizon if end_ts is None else min(end_ts, data_horizon)
     delisting = np.zeros((len(common), len(symbol_list)), dtype=np.bool_)
     closes = []
     for column, symbol in enumerate(symbol_list):
         frame = frames[symbol].loc[common]
         closes.append(frame["Close"].to_numpy(dtype=np.float64))
-        if source_last_dates[symbol] < effective_end and frame.index.max() == common[-1]:
+        if source_last_dates[symbol] < effective_end:
             delisting[-1, column] = True
 
     return PricePanel(
@@ -121,9 +123,8 @@ def load_signal_panel(path: str | Path, prices: PricePanel) -> SignalPanel:
         raise ValueError("signal CSV must contain date,symbol,signal")
     frame["date"] = pd.to_datetime(frame["date"]).dt.normalize()
     frame["symbol"] = frame["symbol"].astype(str)
-    frame["signal"] = pd.to_numeric(frame["signal"], errors="raise").astype(np.int8)
-    if not frame["signal"].isin((-1, 0, 1)).all():
-        raise ValueError("signal values must be -1, 0, or 1")
+    numeric_signals = pd.to_numeric(frame["signal"], errors="raise").to_numpy()
+    frame["signal"] = _validated_signal_values(numeric_signals)
 
     unknown_symbols = set(frame["symbol"]).difference(prices.symbols)
     if unknown_symbols:

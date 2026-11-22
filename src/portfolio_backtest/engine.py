@@ -130,6 +130,9 @@ def _align_benchmark(
         dtype=float,
     ).sort_index()
     aligned = series.reindex(dates, method="ffill")
+    # Forward-fill internal observations, but do not extend a stale benchmark
+    # beyond its final source date.
+    aligned = aligned.mask(aligned.index > series.index[-1])
     if pd.isna(aligned.iloc[0]):
         first = series.index[0].date()
         raise ValueError(
@@ -170,7 +173,7 @@ def _build_scope(
     benchmark_returns = None
     if benchmark is not None:
         benchmark_values = pd.Series(benchmark[window.start : window.stop + 1], index=dates)
-        benchmark_returns = benchmark_values.pct_change(fill_method=None).fillna(0.0)
+        benchmark_returns = benchmark_values.pct_change(fill_method=None)
 
     equity_curve = pd.DataFrame(
         {

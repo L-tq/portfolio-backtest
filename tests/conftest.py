@@ -23,6 +23,7 @@ def make_request(
     mode: str = "full",
     delisting: list[list[bool]] | None = None,
     benchmark_values: list[float] | None = None,
+    benchmark_bars: int | None = None,
 ) -> BacktestRequest:
     close = np.asarray(closes, dtype=np.float64)
     signal = np.asarray(signals, dtype=np.int8)
@@ -52,7 +53,7 @@ def make_request(
         from portfolio_backtest.models import BenchmarkSeries
 
         benchmark = BenchmarkSeries(
-            dates=dates,
+            dates=dates if benchmark_bars is None else dates[:benchmark_bars],
             values=np.asarray(benchmark_values, dtype=np.float64),
             ticker="TEST",
         )
